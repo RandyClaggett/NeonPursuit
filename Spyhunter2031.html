@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Pursuit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&display=swap');
+        
+        body {
+            font-family: 'Russo One', sans-serif;
+            background-color: #111;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #road {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #222 0%, #444 100%);
+            background-size: 100% 40px;
+            overflow: hidden;
+            transition: transform 0.5s ease-out;
+        }
+        
+        .road-line {
+            position: absolute;
+            width: 20px;
+            height: 120px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #fff,
+                #fff 40px,
+                transparent 40px,
+                transparent 80px
+            );
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .player-car {
+            position: absolute;
+            width: 80px;
+            height: 160px;
+            background: linear-gradient(135deg, #00f2ff 0%, #0055ff 100%);
+            border-radius: 10px;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.7);
+            transition: transform 0.2s;
+        }
+        
+        .player-car::before {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            top: 20px;
+            left: 10px;
+        }
+        
+        .player-car::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            bottom: 20px;
+            left: 10px;
+        }
+        
+        .enemy-car {
+            position: absolute;
+            width: 80px;
+            height: 160px;
+            border-radius: 10px;
+            z-index: 5;
+        }
+        
+        .enemy-car-1 {
+            background: linear-gradient(135deg, #ff3b3b 0%, #aa0000 100%);
+            box-shadow: 0 0 30px rgba(255, 50, 50, 0.7);
+        }
+        
+        .enemy-car-2 {
+            background: linear-gradient(135deg, #ffcc00 0%, #ff6600 100%);
+            box-shadow: 0 0 30px rgba(255, 180, 0, 0.7);
+        }
+        
+        .enemy-car-3 {
+            background: linear-gradient(135deg, #00ff55 0%, #009900 100%);
+            box-shadow: 0 0 30px rgba(0, 255, 100, 0.7);
+        }
+        
+        .enemy-car::before {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            top: 20px;
+            left: 10px;
+        }
+        
+        .enemy-car::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            bottom: 20px;
+            left: 10px;
+        }
+        
+        .explosion {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #ff6600 0%, #ff0000 50%, transparent 70%);
+            border-radius: 50%;
+            z-index: 20;
+            animation: explode 0.5s forwards;
+        }
+        
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+        
+        .weapon-icon {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #ff0;
+            border-radius: 50%;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+            box-shadow: 0 0 10px #ff0;
+        }
+        
+        .smoke {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(200,200,200,0.3) 50%, transparent 70%);
+            border-radius: 50%;
+            z-index: 8;
+            animation: smoke 2s forwards;
+        }
+        
+        @keyframes smoke {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            text-shadow: 0 0 5px #00f, 0 0 10px #00f;
+            z-index: 100;
+        }
+        
+        #score-display {
+            margin-bottom: 10px;
+        }
+        
+        #health-bar {
+            width: 200px;
+            height: 20px;
+            background-color: rgba(255, 0, 0, 0.3);
+            border: 2px solid #f00;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        #health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #f00, #ff0);
+            transition: width 0.3s;
+        }
+        
+        #weapon-display {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #ff0;
+        }
+        
+        #speed-display {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #0f0;
+        }
+        
+        #speed-indicator {
+            width: 200px;
+            height: 10px;
+            background: linear-gradient(to right, #f00, #ff0, #0f0);
+            margin-top: 5px;
+            position: relative;
+        }
+        
+        #speed-marker {
+            position: absolute;
+            width: 4px;
+            height: 15px;
+            background: white;
+            top: -2px;
+            left: 0;
+            box-shadow: 0 0 5px white;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 48px;
+            z-index: 200;
+            display: none;
+        }
+        
+        #game-over h1 {
+            color: #f00;
+            text-shadow: 0 0 10px #f00;
+            margin-bottom: 30px;
+        }
+        
+        #restart-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #00f2ff 0%, #0055ff 100%);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #restart-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        #pause-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 48px;
+            z-index: 150;
+            display: none;
+        }
+        
+        .controls {
+            display: flex;
+            margin-top: 30px;
+            gap: 20px;
+        }
+        
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(0, 100, 255, 0.5);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .control-btn:hover {
+            background-color: rgba(0, 100, 255, 0.8);
+        }
+        
+        #sound-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
+        .scenery {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            z-index: 2;
+        }
+        
+        .building {
+            width: 150px;
+            height: 300px;
+            background: linear-gradient(to bottom, #333 0%, #555 100%);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .building::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 20px;
+            background: repeating-linear-gradient(
+                to right,
+                #555,
+                #555 10px,
+                #777 10px,
+                #777 20px
+            );
+            bottom: 0;
+        }
+        
+        .neon-sign {
+            width: 100px;
+            height: 30px;
+            background: #f0f;
+            border-radius: 5px;
+            box-shadow: 0 0 20px #f0f;
+        }
+        
+        .speed-line {
+            position: absolute;
+            width: 2px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.5);
+            z-index: 1;
+            animation: speedLine 0.5s linear infinite;
+        }
+        
+        @keyframes speedLine {
+            0% { transform: translateY(-100px); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        /* Start Screen Styles */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 48px;
+            z-index: 300;
+        }
+        
+        #start-screen h1 {
+            color: #00f2ff;
+            text-shadow: 0 0 10px #0055ff;
+            margin-bottom: 30px;
+            font-size: 72px;
+        }
+        
+        #instructions {
+            background-color: rgba(0, 0, 50, 0.6);
+            border: 3px solid #0055ff;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            margin-bottom: 40px;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        .instruction-item {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .key {
+            display: inline-block;
+            background-color: #333;
+            border: 2px solid #555;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 0 10px;
+            min-width: 40px;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        #start-btn {
+            padding: 20px 50px;
+            background: linear-gradient(135deg, #00f2ff 0%, #0055ff 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(0, 170, 255, 0.7);
+        }
+        
+        #start-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.9);
+        }
+        
+        /* Fire button for mobile */
+        #fire-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 50, 50, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+            display: none; /* Hidden by default, shown for mobile */
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+        
+        #fire-btn i {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Acceleration buttons */
+        #accel-btn {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 80px;
+            height: 80px;
+            background-color: rgba(0, 200, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+            display: none; /* Hidden by default, shown for mobile */
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        
+        #decel-btn {
+            position: absolute;
+            bottom: 130px;
+            left: 30px;
+            width: 80px;
+            height: 80px;
+            background-color: rgba(200, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            z-index: 100;
+            display: none; /* Hidden by default, shown for mobile */
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+        
+        /* Road curve effect */
+        .road-curve {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.3) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        /* Acceleration effects */
+        .speed-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,255,255,0.1) 100%);
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        /* Braking effects */
+        .brake-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 0%, rgba(255,0,0,0.1) 100%);
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="start-screen">
+            <h1>NEON PURSUIT</h1>
+            <div id="instructions">
+                <div class="instruction-item">
+                    <span>Use <span class="key">←</span> and <span class="key">→</span> arrows or <span class="key">A</span> <span class="key">D</span> to steer</span>
+                </div>
+                <div class="instruction-item">
+                    <span>Press <span class="key">↑</span> or <span class="key">W</span> to accelerate</span>
+                </div>
+                <div class="instruction-item">
+                    <span>Press <span class="key">↓</span> or <span class="key">S</span> to brake</span>
+                </div>
+                <div class="instruction-item">
+                    <span>Press <span class="key">SPACE</span> or <span class="key">ENTER</span> to fire weapons</span>
+                </div>
+                <div class="instruction-item">
+                    <span>Collect <span style="color: #ff0;">YELLOW</span> power-ups for special weapons</span>
+                </div>
+                <div class="instruction-item">
+                    <span>Navigate through curves and maintain your speed!</span>
+                </div>
+            </div>
+            <button id="start-btn">START GAME</button>
+        </div>
+        
+        <div id="road">
+            <div class="road-curve" id="road-curve"></div>
+            <div class="speed-effect" id="speed-effect"></div>
+            <div class="brake-effect" id="brake-effect"></div>
+        </div>
+        <div id="hud">
+            <div id="score-display">SCORE: 0</div>
+            <div id="health-bar">
+                <div id="health-fill"></div>
+            </div>
+            <div id="weapon-display">WEAPON: NONE</div>
+            <div id="speed-display">SPEED: 0 MPH</div>
+            <div id="speed-indicator">
+                <div id="speed-marker"></div>
+            </div>
+        </div>
+        
+        <div id="sound-toggle">
+            <i class="fas fa-volume-up"></i>
+        </div>
+        
+        <div id="fire-btn">
+            <i class="fas fa-fire"></i>
+        </div>
+        
+        <div id="accel-btn">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+        
+        <div id="decel-btn">
+            <i class="fas fa-arrow-down"></i>
+        </div>
+        
+        <div id="game-over">
+            <h1>GAME OVER</h1>
+            <div id="final-score">SCORE: 0</div>
+            <button id="restart-btn">PLAY AGAIN</button>
+        </div>
+        
+        <div id="pause-menu">
+            <h1>PAUSED</h1>
+            <div class="controls">
+                <div class="control-btn" id="resume-btn">
+                    <i class="fas fa-play"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <audio id="engineSound" loop>
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-sports-car-fast-engine-1109.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="crashSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-car-explosion-1683.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="weaponSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-laser-weapon-shot-1681.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="powerupSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="music" loop>
+        <source src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="tireSound">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-car-tires-screeching-1073.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="accelSound" loop>
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-car-revving-up-1616.mp3" type="audio/mpeg">
+    </audio>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game elements
+            const gameContainer = document.getElementById('game-container');
+            const road = document.getElementById('road');
+            const roadCurve = document.getElementById('road-curve');
+            const speedEffect = document.getElementById('speed-effect');
+            const brakeEffect = document.getElementById('brake-effect');
+            const hud = document.getElementById('hud');
+            const scoreDisplay = document.getElementById('score-display');
+            const healthBar = document.getElementById('health-fill');
+            const weaponDisplay = document.getElementById('weapon-display');
+            const speedDisplay = document.getElementById('speed-display');
+            const speedMarker = document.getElementById('speed-marker');
+            const gameOverScreen = document.getElementById('game-over');
+            const finalScoreDisplay = document.getElementById('final-score');
+            const restartBtn = document.getElementById('restart-btn');
+            const pauseMenu = document.getElementById('pause-menu');
+            const resumeBtn = document.getElementById('resume-btn');
+            const soundToggle = document.getElementById('sound-toggle');
+            const startScreen = document.getElementById('start-screen');
+            const startBtn = document.getElementById('start-btn');
+            const fireBtn = document.getElementById('fire-btn');
+            const accelBtn = document.getElementById('accel-btn');
+            const decelBtn = document.getElementById('decel-btn');
+            
+            // Audio elements
+            const engineSound = document.getElementById('engineSound');
+            const crashSound = document.getElementById('crashSound');
+            const weaponSound = document.getElementById('weaponSound');
+            const powerupSound = document.getElementById('powerupSound');
+            const music = document.getElementById('music');
+            const tireSound = document.getElementById('tireSound');
+            const accelSound = document.getElementById('accelSound');
+            
+            // Game state
+            let gameRunning = false;
+            let gamePaused = false;
+            let soundOn = true;
+            let score = 0;
+            let health = 100;
+            let currentWeapon = 'NONE';
+            let weaponCooldown = 0;
+            let roadLines = [];
+            let enemyCars = [];
+            let explosions = [];
+            let weapons = [];
+            let smokeParticles = [];
+            let scenery = [];
+            let speedLines = [];
+            let lastTime = 0;
+            let baseGameSpeed = 5;
+            let currentSpeed = 5;
+            let targetSpeed = 5;
+            let maxSpeed = 15;
+            let minSpeed = 2;
+            let accelerationRate = 0.05;
+            let decelerationRate = 0.1;
+            let brakeRate = 0.2;
+            let spawnRate = 2000;
+            let lastSpawnTime = 0;
+            let animationId = null;
+            let playerX = 50;
+            let playerWidth = 80;
+            let playerHeight = 160;
+            let playerElement = null;
+            let keys = {};
+            let isMobile = false;
+            let roadAngle = 0;
+            let curveTimer = 0;
+            let currentCurve = 0;
+            let curveIntensity = 0;
+            let curveDirection = 1;
+            let isAccelerating = false;
+            let isBraking = false;
+            
+            // Check if mobile device
+            function checkMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            
+            // Initialize game
+            function initGame() {
+                // Check if mobile
+                isMobile = checkMobile();
+                if (isMobile) {
+                    fireBtn.style.display = 'flex';
+                    accelBtn.style.display = 'flex';
+                    decelBtn.style.display = 'flex';
+                }
+                
+                // Hide start screen
+                startScreen.style.display = 'none';
+                
+                // Reset game state
+                score = 0;
+                health = 100;
+                currentWeapon = 'NONE';
+                weaponCooldown = 0;
+                gameRunning = true;
+                gamePaused = false;
+                baseGameSpeed = 5;
+                currentSpeed = 5;
+                targetSpeed = 5;
+                maxSpeed = 15;
+                minSpeed = 2;
+                spawnRate = 2000;
+                roadAngle = 0;
+                curveTimer = 0;
+                currentCurve = 0;
+                curveIntensity = 0;
+                curveDirection = 1;
+                isAccelerating = false;
+                isBraking = false;
+                
+                // Reset visual effects
+                speedEffect.style.opacity = '0';
+                brakeEffect.style.opacity = '0';
+                
+                // Reset road position
+                road.style.transform = 'rotate(0deg)';
+                roadCurve.style.opacity = '0';
+                
+                // Clear all elements
+                road.innerHTML = '';
+                road.appendChild(roadCurve);
+                road.appendChild(speedEffect);
+                road.appendChild(brakeEffect);
+                enemyCars = [];
+                explosions = [];
+                weapons = [];
+                smokeParticles = [];
+                scenery = [];
+                speedLines = [];
+                
+                // Create player car
+                playerElement = document.createElement('div');
+                playerElement.className = 'player-car';
+                playerElement.style.left = `${playerX}%`;
+                road.appendChild(playerElement);
+                
+                // Create initial road lines
+                createRoadLines();
+                
+                // Create initial scenery
+                createScenery();
+                
+                // Update HUD
+                updateHUD();
+                
+                // Hide game over screen
+                gameOverScreen.style.display = 'none';
+                
+                // Play sounds
+                if (soundOn) {
+                    engineSound.currentTime = 0;
+                    engineSound.play();
+                    engineSound.volume = 0.3;
+                    music.currentTime = 0;
+                    music.play();
+                    music.volume = 0.5;
+                }
+                
+                // Start game loop
+                lastTime = performance.now();
+                gameLoop();
+            }
+            
+            // Create road lines
+            function createRoadLines() {
+                const lineCount = Math.ceil(window.innerHeight / 120) + 2;
+                
+                for (let i = 0; i < lineCount; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'road-line';
+                    line.style.top = `${i * 120 - 120}px`;
+                    road.appendChild(line);
+                    roadLines.push(line);
+                }
+            }
+            
+            // Create scenery
+            function createScenery() {
+                // Buildings
+                for (let i = 0; i < 4; i++) {
+                    const buildingLeft = document.createElement('div');
+                    buildingLeft.className = 'scenery building';
+                    buildingLeft.style.left = `${-150 + Math.random() * 50}px`;
+                    buildingLeft.style.top = `${i * 300 - 300}px`;
+                    road.appendChild(buildingLeft);
+                    scenery.push(buildingLeft);
+                    
+                    const buildingRight = document.createElement('div');
+                    buildingRight.className = 'scenery building';
+                    buildingRight.style.right = `${-150 + Math.random() * 50}px`;
+                    buildingRight.style.top = `${i * 300 - 300}px`;
+                    road.appendChild(buildingRight);
+                    scenery.push(buildingRight);
+                    
+                    // Neon signs
+                    if (Math.random() > 0.7) {
+                        const signLeft = document.createElement('div');
+                        signLeft.className = 'scenery neon-sign';
+                        signLeft.style.left = `${50 + Math.random() * 50}px`;
+                        signLeft.style.top = `${i * 300 - 100 + Math.random() * 100}px`;
+                        road.appendChild(signLeft);
+                        scenery.push(signLeft);
+                    }
+                    
+                    if (Math.random() > 0.7) {
+                        const signRight = document.createElement('div');
+                        signRight.className = 'scenery neon-sign';
+                        signRight.style.right = `${50 + Math.random() * 50}px`;
+                        signRight.style.top = `${i * 300 - 100 + Math.random() * 100}px`;
+                        road.appendChild(signRight);
+                        scenery.push(signRight);
+                    }
+                }
+            }
+            
+            // Update HUD
+            function updateHUD() {
+                scoreDisplay.textContent = `SCORE: ${score}`;
+                healthBar.style.width = `${health}%`;
+                weaponDisplay.textContent = `WEAPON: ${currentWeapon}`;
+                speedDisplay.textContent = `SPEED: ${Math.round(currentSpeed * 20)} MPH`;
+                
+                // Update speed marker position
+                const speedPercentage = (currentSpeed - minSpeed) / (maxSpeed - minSpeed) * 100;
+                speedMarker.style.left = `${speedPercentage}%`;
+                
+                if (health > 60) {
+                    healthBar.style.background = 'linear-gradient(to right, #0f0, #0a0)';
+                } else if (health > 30) {
+                    healthBar.style.background = 'linear-gradient(to right, #ff0, #aa0)';
+                } else {
+                    healthBar.style.background = 'linear-gradient(to right, #f00, #a00)';
+                }
+            }
+            
+            // Spawn enemy car
+            function spawnEnemyCar() {
+                const carTypes = ['enemy-car-1', 'enemy-car-2', 'enemy-car-3'];
+                const carType = carTypes[Math.floor(Math.random() * carTypes.length)];
+                
+                // Adjust lane based on current curve
+                let laneOffset = 0;
+                if (curveIntensity > 0) {
+                    laneOffset = curveDirection * curveIntensity * 5;
+                }
+                
+                const lane = Math.random() > 0.5 ? 35 + laneOffset : 65 + laneOffset;
+                
+                const car = document.createElement('div');
+                car.className = `enemy-car ${carType}`;
+                car.style.left = `${lane}%`;
+                car.style.top = `-160px`;
+                road.appendChild(car);
+                
+                enemyCars.push({
+                    element: car,
+                    x: lane,
+                    y: -160,
+                    speed: 3 + Math.random() * 2,
+                    width: 80,
+                    height: 160
+                });
+            }
+            
+            // Spawn weapon pickup
+            function spawnWeapon() {
+                const weaponTypes = ['MISSILE', 'LASER', 'SHIELD'];
+                const weaponType = weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
+                
+                // Adjust lane based on current curve
+                let laneOffset = 0;
+                if (curveIntensity > 0) {
+                    laneOffset = curveDirection * curveIntensity * 5;
+                }
+                
+                const lane = Math.random() > 0.5 ? 35 + laneOffset : 65 + laneOffset;
+                
+                const weapon = document.createElement('div');
+                weapon.className = 'weapon-icon';
+                weapon.textContent = weaponType[0];
+                weapon.style.left = `${lane}%`;
+                weapon.style.top = `-30px`;
+                road.appendChild(weapon);
+                
+                weapons.push({
+                    element: weapon,
+                    x: lane,
+                    y: -30,
+                    speed: 3,
+                    width: 30,
+                    height: 30,
+                    type: weaponType
+                });
+            }
+            
+            // Create explosion
+            function createExplosion(x, y) {
+                const explosion = document.createElement('div');
+                explosion.className = 'explosion';
+                explosion.style.left = `${x - 50}px`;
+                explosion.style.top = `${y - 50}px`;
+                road.appendChild(explosion);
+                
+                explosions.push({
+                    element: explosion,
+                    time: 0
+                });
+                
+                if (soundOn) {
+                    crashSound.currentTime = 0;
+                    crashSound.play();
+                }
+            }
+            
+            // Create smoke
+            function createSmoke(x, y) {
+                const smoke = document.createElement('div');
+                smoke.className = 'smoke';
+                smoke.style.left = `${x - 20}px`;
+                smoke.style.top = `${y - 20}px`;
+                road.appendChild(smoke);
+                
+                smokeParticles.push({
+                    element: smoke,
+                    time: 0
+                });
+            }
+            
+            // Create speed line
+            function createSpeedLine() {
+                const line = document.createElement('div');
+                line.className = 'speed-line';
+                line.style.left = `${Math.random() * 100}%`;
+                line.style.top = `-100px`;
+                road.appendChild(line);
+                
+                speedLines.push({
+                    element: line,
+                    speed: 10 + Math.random() * 10
+                });
+            }
+            
+            // Fire weapon
+            function fireWeapon() {
+                if (currentWeapon === 'NONE' || weaponCooldown > 0) return;
+                
+                if (soundOn) {
+                    weaponSound.currentTime = 0;
+                    weaponSound.play();
+                }
+                
+                if (currentWeapon === 'MISSILE') {
+                    // Create missile projectile
+                    const missile = document.createElement('div');
+                    missile.className = 'weapon-icon';
+                    missile.textContent = 'M';
+                    missile.style.left = `${playerX}%`;
+                    missile.style.bottom = `${parseInt(playerElement.style.bottom) + playerHeight + 10}px`;
+                    road.appendChild(missile);
+                    
+                    weapons.push({
+                        element: missile,
+                        x: playerX,
+                        y: window.innerHeight - parseInt(playerElement.style.bottom) - playerHeight - 10,
+                        speed: -10,
+                        width: 30,
+                        height: 30,
+                        type: 'MISSILE_PROJECTILE'
+                    });
+                    
+                    weaponCooldown = 30;
+                } else if (currentWeapon === 'LASER') {
+                    // Laser hits all enemies on screen
+                    for (let i = 0; i < enemyCars.length; i++) {
+                        const car = enemyCars[i];
+                        createExplosion(
+                            car.element.offsetLeft + car.width / 2,
+                            car.element.offsetTop + car.height / 2
+                        );
+                        score += 50;
+                        car.element.remove();
+                        enemyCars.splice(i, 1);
+                        i--;
+                    }
+                    
+                    weaponCooldown = 60;
+                } else if (currentWeapon === 'SHIELD') {
+                    // Shield protects for a short time
+                    playerElement.style.boxShadow = '0 0 50px #0f0';
+                    setTimeout(() => {
+                        if (playerElement) {
+                            playerElement.style.boxShadow = '0 0 30px rgba(0, 170, 255, 0.7)';
+                        }
+                    }, 3000);
+                    
+                    weaponCooldown = 180;
+                }
+                
+                updateHUD();
+            }
+            
+            // Check collisions
+            function checkCollisions() {
+                const playerRect = {
+                    x: playerElement.offsetLeft,
+                    y: playerElement.offsetTop,
+                    width: playerWidth,
+                    height: playerHeight
+                };
+                
+                // Check enemy car collisions
+                for (let i = 0; i < enemyCars.length; i++) {
+                    const car = enemyCars[i];
+                    const carRect = {
+                        x: car.element.offsetLeft,
+                        y: car.element.offsetTop,
+                        width: car.width,
+                        height: car.height
+                    };
+                    
+                    if (isColliding(playerRect, carRect)) {
+                        // Collision with enemy car
+                        createExplosion(
+                            (playerRect.x + carRect.x + playerRect.width) / 2,
+                            (playerRect.y + carRect.y + playerRect.height) / 2
+                        );
+                        
+                        health -= 20;
+                        car.element.remove();
+                        enemyCars.splice(i, 1);
+                        i--;
+                        
+                        if (health <= 0) {
+                            gameOver();
+                        }
+                        
+                        updateHUD();
+                    }
+                }
+                
+                // Check weapon pickups
+                for (let i = 0; i < weapons.length; i++) {
+                    const weapon = weapons[i];
+                    const weaponRect = {
+                        x: weapon.element.offsetLeft,
+                        y: weapon.element.offsetTop,
+                        width: weapon.width,
+                        height: weapon.height
+                    };
+                    
+                    if (isColliding(playerRect, weaponRect) && weapon.type !== 'MISSILE_PROJECTILE') {
+                        // Collected weapon
+                        if (soundOn) {
+                            powerupSound.currentTime = 0;
+                            powerupSound.play();
+                        }
+                        
+                        currentWeapon = weapon.type;
+                        weaponCooldown = 0;
+                        weapon.element.remove();
+                        weapons.splice(i, 1);
+                        i--;
+                        
+                        updateHUD();
+                    }
+                }
+                
+                // Check missile hits
+                for (let i = 0; i < weapons.length; i++) {
+                    const weapon = weapons[i];
+                    
+                    if (weapon.type === 'MISSILE_PROJECTILE') {
+                        const missileRect = {
+                            x: weapon.element.offsetLeft,
+                            y: weapon.element.offsetTop,
+                            width: weapon.width,
+                            height: weapon.height
+                        };
+                        
+                        // Check if missile hit an enemy
+                        for (let j = 0; j < enemyCars.length; j++) {
+                            const car = enemyCars[j];
+                            const carRect = {
+                                x: car.element.offsetLeft,
+                                y: car.element.offsetTop,
+                                width: car.width,
+                                height: car.height
+                            };
+                            
+                            if (isColliding(missileRect, carRect)) {
+                                createExplosion(
+                                    (missileRect.x + carRect.x + missileRect.width) / 2,
+                                    (missileRect.y + carRect.y + missileRect.height) / 2
+                                );
+                                
+                                score += 50;
+                                weapon.element.remove();
+                                weapons.splice(i, 1);
+                                i--;
+                                car.element.remove();
+                                enemyCars.splice(j, 1);
+                                j--;
+                                
+                                updateHUD();
+                                break;
+                            }
+                        }
+                        
+                        // Remove missile if it goes off screen
+                        if (weapon.y < -50) {
+                            weapon.element.remove();
+                            weapons.splice(i, 1);
+                            i--;
+                        }
+                    }
+                }
+            }
+            
+            // Check if two rectangles are colliding
+            function isColliding(rect1, rect2) {
+                return (
+                    rect1.x < rect2.x + rect2.width &&
+                    rect1.x + rect1.width > rect2.x &&
+                    rect1.y < rect2.y + rect2.height &&
+                    rect1.y + rect1.height > rect2.y
+                );
+            }
+            
+            // Game over
+            function gameOver() {
+                gameRunning = false;
+                cancelAnimationFrame(animationId);
+                
+                finalScoreDisplay.textContent = `SCORE: ${score}`;
+                gameOverScreen.style.display = 'flex';
+                
+                if (soundOn) {
+                    engineSound.pause();
+                    music.pause();
+                    accelSound.pause();
+                }
+            }
+            
+            // Toggle pause
+            function togglePause() {
+                if (!gameRunning) return;
+                
+                gamePaused = !gamePaused;
+                
+                if (gamePaused) {
+                    pauseMenu.style.display = 'flex';
+                    cancelAnimationFrame(animationId);
+                    
+                    if (soundOn) {
+                        engineSound.pause();
+                        music.pause();
+                        accelSound.pause();
+                    }
+                } else {
+                    pauseMenu.style.display = 'none';
+                    lastTime = performance.now();
+                    gameLoop();
+                    
+                    if (soundOn) {
+                        engineSound.play();
+                        music.play();
+                        if (isAccelerating) accelSound.play();
+                    }
+                }
+            }
+            
+            // Toggle sound
+            function toggleSound() {
+                soundOn = !soundOn;
+                
+                if (soundOn) {
+                    soundToggle.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    engineSound.play();
+                    music.play();
+                    if (isAccelerating) accelSound.play();
+                } else {
+                    soundToggle.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                    engineSound.pause();
+                    music.pause();
+                    accelSound.pause();
+                }
+            }
+            
+            // Handle acceleration
+            function accelerate() {
+                isAccelerating = true;
+                targetSpeed = maxSpeed;
+                
+                // Show acceleration effect
+                speedEffect.style.opacity = '0.5';
+                brakeEffect.style.opacity = '0';
+                
+                // Play acceleration sound
+                if (soundOn && !accelSound.paused) {
+                    accelSound.currentTime = 0;
+                    accelSound.play();
+                    accelSound.volume = 0.3;
+                }
+            }
+            
+            // Handle deceleration
+            function decelerate() {
+                isBraking = true;
+                targetSpeed = baseGameSpeed;
+                
+                // Show braking effect
+                brakeEffect.style.opacity = '0.5';
+                speedEffect.style.opacity = '0';
+                
+                // Play tire screech sound when braking hard
+                if (soundOn && currentSpeed > baseGameSpeed + 2) {
+                    tireSound.currentTime = 0;
+                    tireSound.play();
+                }
+            }
+            
+            // Handle braking (more aggressive than deceleration)
+            function brake() {
+                isBraking = true;
+                targetSpeed = minSpeed;
+                
+                // Show braking effect
+                brakeEffect.style.opacity = '0.5';
+                speedEffect.style.opacity = '0';
+                
+                // Play tire screech sound
+                if (soundOn) {
+                    tireSound.currentTime = 0;
+                    tireSound.play();
+                }
+            }
+            
+            // Reset acceleration state
+            function resetAcceleration() {
+                isAccelerating = false;
+                isBraking = false;
+                targetSpeed = baseGameSpeed;
+                
+                // Hide effects
+                speedEffect.style.opacity = '0';
+                brakeEffect.style.opacity = '0';
+                
+                // Stop acceleration sound
+                if (soundOn) {
+                    accelSound.pause();
+                }
+            }
+            
+            // Handle curves in the road
+            function handleCurves(deltaTime) {
+                curveTimer += deltaTime;
+                
+                // Every 5-10 seconds, start a new curve
+                if (curveTimer > 5000 + Math.random() * 5000) {
+                    curveTimer = 0;
+                    currentCurve = 2000 + Math.random() * 3000; // Curve lasts 2-5 seconds
+                    curveIntensity = 0.5 + Math.random() * 0.5; // Intensity of the curve
+                    curveDirection = Math.random() > 0.5 ? 1 : -1; // Left or right curve
+                }
+                
+                // If we're in a curve
+                if (currentCurve > 0) {
+                    currentCurve -= deltaTime;
+                    
+                    // Gradually increase curve intensity at start
+                    if (currentCurve > 1500) {
+                        curveIntensity = Math.min(1, curveIntensity + 0.005);
+                    }
+                    // Gradually decrease curve intensity at end
+                    else if (currentCurve < 500) {
+                        curveIntensity = Math.max(0, curveIntensity - 0.01);
+                    }
+                    
+                    // Apply the curve effect (based on current speed)
+                    const speedFactor = currentSpeed / maxSpeed;
+                    roadAngle = curveDirection * curveIntensity * 5 * speedFactor;
+                    road.style.transform = `rotate(${roadAngle}deg)`;
+                    
+                    // Show curve visual effect
+                    roadCurve.style.opacity = `${curveIntensity * 0.5}`;
+                    roadCurve.style.transform = `rotate(${curveDirection * 90}deg)`;
+                    
+                    // Add some tilt to the player's car
+                    playerElement.style.transform = `translateX(-50%) rotate(${curveDirection * curveIntensity * 5 * speedFactor}deg)`;
+                    
+                    // Make it harder to control in curves (but don't affect speed)
+                    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                        playerX = Math.max(35 - curveIntensity * 10, playerX - 3);
+                    }
+                    
+                    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                        playerX = Math.min(65 + curveIntensity * 10, playerX + 3);
+                    }
+                } 
+                // No curve - straight road
+                else {
+                    roadAngle *= 0.95; // Smoothly return to straight
+                    if (Math.abs(roadAngle) < 0.1) roadAngle = 0;
+                    road.style.transform = `rotate(${roadAngle}deg)`;
+                    roadCurve.style.opacity = '0';
+                    playerElement.style.transform = 'translateX(-50%)';
+                }
+            }
+            
+            // Game loop
+            function gameLoop(timestamp = 0) {
+                if (!gameRunning || gamePaused) return;
+                
+                animationId = requestAnimationFrame(gameLoop);
+                
+                const deltaTime = timestamp - lastTime;
+                lastTime = timestamp;
+                
+                // Handle speed changes with momentum
+                if (currentSpeed < targetSpeed) {
+                    // Accelerating
+                    currentSpeed += accelerationRate;
+                    if (currentSpeed > targetSpeed) currentSpeed = targetSpeed;
+                } else if (currentSpeed > targetSpeed) {
+                    // Decelerating or braking
+                    const rate = isBraking ? brakeRate : decelerationRate;
+                    currentSpeed -= rate;
+                    if (currentSpeed < targetSpeed) currentSpeed = targetSpeed;
+                }
+                
+                // Adjust engine sound pitch based on speed
+                if (soundOn) {
+                    engineSound.playbackRate = 0.5 + (currentSpeed / maxSpeed) * 0.5;
+                    accelSound.playbackRate = 0.8 + (currentSpeed / maxSpeed) * 0.4;
+                }
+                
+                // Handle curves in the road
+                handleCurves(deltaTime);
+                
+                // Calculate actual game speed based on current speed
+                const actualGameSpeed = currentSpeed;
+                
+                // Move road lines
+                for (let i = 0; i < roadLines.length; i++) {
+                    const line = roadLines[i];
+                    const top = parseInt(line.style.top) || 0;
+                    
+                    line.style.top = `${top + actualGameSpeed}px`;
+                    
+                    if (top > window.innerHeight) {
+                        line.style.top = `${-120}px`;
+                    }
+                }
+                
+                // Move scenery
+                for (let i = 0; i < scenery.length; i++) {
+                    const item = scenery[i];
+                    const top = parseInt(item.style.top) || 0;
+                    
+                    item.style.top = `${top + actualGameSpeed}px`;
+                    
+                    if (top > window.innerHeight) {
+                        // Recycle scenery at the top
+                        item.style.top = `${-300}px`;
+                        
+                        // Randomize position slightly
+                        if (item.className.includes('building')) {
+                            if (item.style.left !== undefined) {
+                                item.style.left = `${-150 + Math.random() * 50}px`;
+                            } else {
+                                item.style.right = `${-150 + Math.random() * 50}px`;
+                            }
+                        }
+                    }
+                }
+                
+                // Move enemy cars
+                for (let i = 0; i < enemyCars.length; i++) {
+                    const car = enemyCars[i];
+                    car.y += car.speed;
+                    car.element.style.top = `${car.y}px`;
+                    
+                    // Remove cars that are off screen
+                    if (car.y > window.innerHeight) {
+                        score += 10;
+                        car.element.remove();
+                        enemyCars.splice(i, 1);
+                        i--;
+                        updateHUD();
+                    }
+                }
+                
+                // Move weapons
+                for (let i = 0; i < weapons.length; i++) {
+                    const weapon = weapons[i];
+                    weapon.y += weapon.speed;
+                    weapon.element.style.top = `${weapon.y}px`;
+                    
+                    // Remove weapons that are off screen
+                    if (weapon.y > window.innerHeight + 50) {
+                        weapon.element.remove();
+                        weapons.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                // Update explosions
+                for (let i = 0; i < explosions.length; i++) {
+                    const explosion = explosions[i];
+                    explosion.time += deltaTime;
+                    
+                    if (explosion.time > 500) {
+                        explosion.element.remove();
+                        explosions.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                // Update smoke
+                for (let i = 0; i < smokeParticles.length; i++) {
+                    const smoke = smokeParticles[i];
+                    smoke.time += deltaTime;
+                    
+                    if (smoke.time > 2000) {
+                        smoke.element.remove();
+                        smokeParticles.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                // Update speed lines
+                for (let i = 0; i < speedLines.length; i++) {
+                    const line = speedLines[i];
+                    const top = parseInt(line.element.style.top) || 0;
+                    
+                    line.element.style.top = `${top + line.speed}px`;
+                    
+                    if (top > window.innerHeight) {
+                        line.element.remove();
+                        speedLines.splice(i, 1);
+                        i--;
+                    }
+                }
+                
+                // Spawn new enemies
+                if (timestamp - lastSpawnTime > spawnRate) {
+                    if (Math.random() > 0.7) {
+                        spawnEnemyCar();
+                    } else if (Math.random() > 0.8 && currentWeapon === 'NONE') {
+                        spawnWeapon();
+                    }
+                    
+                    lastSpawnTime = timestamp;
+                    
+                    // Increase difficulty
+                    if (score > 0 && score % 500 === 0) {
+                        maxSpeed = Math.min(20, maxSpeed + 1);
+                        spawnRate = Math.max(500, spawnRate - 100);
+                    }
+                }
+                
+                // Create speed lines occasionally (more at higher speeds)
+                if (Math.random() > 0.98 - (currentSpeed / maxSpeed) * 0.05) {
+                    createSpeedLine();
+                }
+                
+                // Create smoke from player car (more when accelerating/braking)
+                if (Math.random() > 0.8 - (Math.abs(currentSpeed - baseGameSpeed) / maxSpeed) * 0.3) {
+                    createSmoke(
+                        playerElement.offsetLeft + playerWidth / 2,
+                        playerElement.offsetTop + playerHeight
+                    );
+                }
+                
+                // Update weapon cooldown
+                if (weaponCooldown > 0) {
+                    weaponCooldown--;
+                    
+                    if (weaponCooldown === 0 && currentWeapon !== 'NONE') {
+                        currentWeapon = 'NONE';
+                        updateHUD();
+                    }
+                }
+                
+                // Check collisions
+                checkCollisions();
+                
+                // Handle player steering input
+                if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                    playerX = Math.max(35, playerX - 5);
+                    playerElement.style.left = `${playerX}%`;
+                }
+                
+                if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                    playerX = Math.min(65, playerX + 5);
+                    playerElement.style.left = `${playerX}%`;
+                }
+                
+                if (keys[' '] || keys['Enter']) {
+                    fireWeapon();
+                }
+                
+                // Update HUD
+                updateHUD();
+            }
+            
+            // Keyboard controls
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+                
+                if (e.key === 'p' || e.key === 'P') {
+                    togglePause();
+                }
+                
+                if (e.key === 'm' || e.key === 'M') {
+                    toggleSound();
+                }
+                
+                if (!gameRunning && (e.key === ' ' || e.key === 'Enter')) {
+                    initGame();
+                }
+                
+                // Acceleration controls
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                    accelerate();
+                }
+                
+                // Deceleration controls
+                if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                    // Shift for hard braking
+                    if (e.shiftKey) {
+                        brake();
+                    } else {
+                        decelerate();
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+                
+                // Reset acceleration when keys are released
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || 
+                    e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                    resetAcceleration();
+                }
+            });
+            
+            // Button controls
+            startBtn.addEventListener('click', initGame);
+            restartBtn.addEventListener('click', initGame);
+            resumeBtn.addEventListener('click', togglePause);
+            soundToggle.addEventListener('click', toggleSound);
+            fireBtn.addEventListener('click', fireWeapon);
+            
+            // Acceleration buttons
+            accelBtn.addEventListener('mousedown', accelerate);
+            accelBtn.addEventListener('touchstart', accelerate);
+            accelBtn.addEventListener('mouseup', resetAcceleration);
+            accelBtn.addEventListener('touchend', resetAcceleration);
+            accelBtn.addEventListener('mouseleave', resetAcceleration);
+            
+            decelBtn.addEventListener('mousedown', decelerate);
+            decelBtn.addEventListener('touchstart', decelerate);
+            decelBtn.addEventListener('mouseup', resetAcceleration);
+            decelBtn.addEventListener('touchend', resetAcceleration);
+            decelBtn.addEventListener('mouseleave', resetAcceleration);
+            
+            // Touch controls for mobile
+            let touchStartX = 0;
+            
+            gameContainer.addEventListener('touchstart', (e) => {
+                if (!gameRunning) {
+                    initGame();
+                    return;
+                }
+                
+                touchStartX = e.touches[0].clientX;
+                e.preventDefault();
+            }, { passive: false });
+            
+            gameContainer.addEventListener('touchmove', (e) => {
+                if (!gameRunning || gamePaused) return;
+                
+                const touchX = e.touches[0].clientX;
+                const windowWidth = window.innerWidth;
+                
+                if (touchX < touchStartX - 30) {
+                    // Swipe left
+                    playerX = Math.max(35, playerX - 5);
+                    playerElement.style.left = `${playerX}%`;
+                    touchStartX = touchX;
+                } else if (touchX > touchStartX + 30) {
+                    // Swipe right
+                    playerX = Math.min(65, playerX + 5);
+                    playerElement.style.left = `${playerX}%`;
+                    touchStartX = touchX;
+                }
+                
+                e.preventDefault();
+            }, { passive: false });
+            
+            gameContainer.addEventListener('touchend', (e) => {
+                if (!gameRunning || gamePaused) return;
+                
+                // Fire weapon on tap (unless it was a swipe)
+                if (Math.abs(e.changedTouches[0].clientX - touchStartX) < 20) {
+                    fireWeapon();
+                }
+                e.preventDefault();
+            }, { passive: false });
+        });
+    </script>
+</body>
+</html>
